@@ -18,108 +18,106 @@ import javafx.scene.control.Label;
 
 import java.text.DecimalFormat;
 
-enum Octave
-{
-    SubContra(0), Contra(1), Great(2), Small(3), oneLine(4), twoLine(5), threeLine(6), forLine(7), fiveLine(8), ;
-
-    private int octaveNumber;
-
-    Octave(int octaveNumber)
-    {
-        this.octaveNumber = octaveNumber;
-    }
-
-    public int getOctaveNumber()
-    {
-        return octaveNumber;
-    }
-}
-
-enum Note
-{
-    //European Notation (US B = EU H) !!!
-    Ces(-1), C(0), Cis(1), Des(1), D(2), Dis(3), Es(3), E(4), Fes(4), Eis(5), F(5),
-    Fis(6), Ges(6), G(7), Gis(8), As(8), A(9), Ais(10), B(10), H(11), His(12);
-
-    private int halfStepsNumber;
-
-    Note(int halfStepsNumber)
-    {
-        this.halfStepsNumber = halfStepsNumber;
-    }
-
-    public int getHalfStepsNumber()
-    {
-        return halfStepsNumber;
-    }
-}
-
 class Pitchmeter
 {
-    private class NoteObject
-    {
-        private Note note;
-        private Octave octave;
-
-        public void setNote(Note note) {
-            this.note = note;
-        }
-
-        public void setOctave(Octave octave) {
-            this.octave = octave;
-        }
-
-        public Note getNote() {
-            return note;
-        }
-
-        public Octave getOctave() {
-            return octave;
-        }
-    }
-
     //assumes that spectrum equals ca. 27 - 4200 (Hz) - default piano bandwidth
     //which means -> A0 - C8
     private class NoteFreqTable
     {
-        private NoteObject[] noteObjects;
-        private double[] frequencies;
+        private Note definedFixedNote;
+        private Octave definedFixedNoteOctave;
+        private double definedFixedNoteFreq;
 
-        NoteFreqTable(Note definedFixedNote, double definedFixedNoteFreq, Octave definedFixedNoteOctave)
+        private NoteObject[] noteObjects = new NoteObject[Note.values().length * Octave.values().length];
+        private double[] frequencies = new double[noteObjects.length];
+
+        private double pow = (double) 1 / (double) 12;
+        private final double a = Math.pow(2, pow);
+
+        private NoteFreqTable(Note definedFixedNote, Octave definedFixedNoteOctave, double definedFixedNoteFreq)
         {
+            this.definedFixedNote = definedFixedNote;
+            this.definedFixedNoteOctave = definedFixedNoteOctave;
+            this.definedFixedNoteFreq = definedFixedNoteFreq;
 
+            Note[] notes = Note.values();
+            Octave[] octaves = Octave.values();
+
+            for (int i = 0; i < octaves.length; i++)
+            {
+                for (int j = 0; j < notes.length; j++)
+                {
+                    noteObjects[(i * notes.length) + j] = new NoteObject(notes[j], octaves[i]);
+                    frequencies[(i * notes.length) + j] = calculateFrequencyFromNote(notes[j], octaves[i]);
+                }
+            }
+        }
+
+        private double calculateFrequencyFromNote(Note note, Octave octave)
+        {
+            int halfStepsNumber;
+
+            halfStepsNumber = note.getHalfStepsNumber() - definedFixedNote.getHalfStepsNumber();
+            halfStepsNumber = halfStepsNumber + ((octave.getOctaveNumber() - definedFixedNoteOctave.getOctaveNumber()) * 12);
+
+            return (definedFixedNoteFreq * (Math.pow(a, halfStepsNumber)));
+        }
+
+        private double getFreqByNote(NoteObject noteObject)
+        {
+            int i = 0;
+
+            while(i < frequencies.length)
+            {
+                if ((noteObject.getNote() == noteObjects[i].getNote()) && noteObject.getOctave() == noteObjects[i].getOctave())
+                {
+                    break;
+                }
+                i++;
+            }
+
+            return frequencies[i];
+        }
+
+        private NoteObject getNoteByFreq(double freq)
+        {
+            if (freq > frequencies[frequencies.length - 1] || freq < frequencies[0])
+            {
+                throw new IllegalArgumentException();
+            }
+
+            int i;
+            double leftRange = 0, rightRange = frequencies[frequencies.length - 1];
+
+            for (i = 0; i < frequencies.length; i++)
+            {
+                if (frequencies[i] < freq)
+                {
+                    leftRange = frequencies[i];
+                    continue;
+                }
+                rightRange = frequencies[i];
+                break;
+            }
+
+            if (Math.abs(leftRange - freq) >= Math.abs(rightRange - freq))
+            {
+                return noteObjects[i];
+            }
+            else
+            {
+                return noteObjects[i - 1];
+            }
         }
     }
 
-    private Note definedFixedNote;
-    private double definedFixedNoteFreq;
-    private Octave definedFixedNoteOctave;
+    private NoteFreqTable noteFreqTable;
 
-    private double pow = (double) 1 / (double) 12;
-    private final double a = Math.pow(2, pow);
-
-    DecimalFormat dominantFreqFormat = new DecimalFormat("#.##");
+    private DecimalFormat dominantFreqFormat = new DecimalFormat("#.##");
 
     Pitchmeter(Note definedFixedNote, double definedFixedNoteFreq, Octave definedFixedNoteOctave)
     {
-        this.definedFixedNote = definedFixedNote;
-        this.definedFixedNoteFreq = definedFixedNoteFreq;
-        this.definedFixedNoteOctave = definedFixedNoteOctave;
-    }
-
-    double calculateFreqFromNote(Note note, Octave octave)
-    {
-        int halfStepsNumber;
-
-        halfStepsNumber = note.getHalfStepsNumber() - definedFixedNote.getHalfStepsNumber();
-        halfStepsNumber = halfStepsNumber + ((octave.getOctaveNumber() - definedFixedNoteOctave.getOctaveNumber()) * 12);
-
-        return (definedFixedNoteFreq * (Math.pow(a, halfStepsNumber)));
-    }
-
-    NoteObject calculateNoteFromFreq
-    {
-
+        this.noteFreqTable = new NoteFreqTable(definedFixedNote, definedFixedNoteOctave, definedFixedNoteFreq);
     }
 
     double findDominantFreq(int lowFreq, int hiFreq, double[] postFFTsignal, float sampleRate, int rawDataLenght)
@@ -169,7 +167,7 @@ class Pitchmeter
         return dominantSample * deltaF;
     }
 
-    void setDominantFreqValue(double dominantFreq, Label indicator)
+    void setDominantFreqIndicator(double dominantFreq, Label indicator)
     {
         indicator.setText(dominantFreqFormat.format(dominantFreq) + "Hz");
     }
@@ -177,6 +175,16 @@ class Pitchmeter
     void setIndicatorVisible(boolean visible, Control indicator)
     {
         indicator.setVisible(visible);
+    }
+
+    double getFreqByNote(NoteObject noteObject)
+    {
+        return noteFreqTable.getFreqByNote(noteObject);
+    }
+
+    NoteObject getNoteByFreq(double freq)
+    {
+        return noteFreqTable.getNoteByFreq(freq);
     }
 }
 

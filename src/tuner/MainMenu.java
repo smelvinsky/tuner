@@ -4,12 +4,11 @@ import javafx.event.ActionEvent;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
-
-import java.text.DecimalFormat;
 
 class MainMenu
 {
@@ -24,6 +23,8 @@ class MainMenu
     private Label freqIndicator = new Label("5000.34");
     private Label sharpNoteIndicator = new Label("#");
     private Label flatNoteIndicator = new Label("b");
+
+    private CheckBox showFreqCheckBox = new CheckBox("Show freq.");
 
     private Spectrometer spectrometer;
     private Pitchmeter pitchmeter;
@@ -63,17 +64,37 @@ class MainMenu
         freqIndicator.setLayoutY(mainMenuScene.getHeight() - 200);
         freqIndicator.setFont(Font.font("Apple Casual", 15));
         freqIndicator.setTextFill(Color.ANTIQUEWHITE);
+        freqIndicator.setVisible(false);
 
         sharpNoteIndicator.setLayoutX((mainMenuScene.getWidth() / 2) + 25);
         sharpNoteIndicator.setLayoutY(150);
         sharpNoteIndicator.setFont(Font.font("Apple Casual", 50));
         sharpNoteIndicator.setTextFill(Color.ANTIQUEWHITE);
+        sharpNoteIndicator.setVisible(false);
 
         flatNoteIndicator.setLayoutX((mainMenuScene.getWidth() / 2) + 30);
         flatNoteIndicator.setLayoutY(195);
         flatNoteIndicator.setFont(Font.font("Apple Casual", 50));
         flatNoteIndicator.setTextFill(Color.ANTIQUEWHITE);
+        flatNoteIndicator.setVisible(false);
 
+        showFreqCheckBox.setLayoutX(5);
+        showFreqCheckBox.setLayoutY(5);
+        showFreqCheckBox.setFont(Font.font("Apple Casual"));
+        showFreqCheckBox.setTextFill(Color.ANTIQUEWHITE);
+
+        showFreqCheckBox.setOnAction((ActionEvent ae) -> {
+            if(showFreqCheckBox.isSelected())
+            {
+                freqIndicator.setVisible(true);
+            }
+            else
+            {
+                freqIndicator.setVisible(false);
+            }
+        });
+
+        mainMenuGroup.getChildren().add(showFreqCheckBox);
         mainMenuGroup.getChildren().add(sharpNoteIndicator);
         mainMenuGroup.getChildren().add(flatNoteIndicator);
         mainMenuGroup.getChildren().add(freqIndicator);

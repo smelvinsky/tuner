@@ -39,7 +39,7 @@ public class Tuner extends Application
         {
             double dominantFreq =  pitchmeter.findDominantFreq(100, 4000, postFFTdata, sampleRate, rawMicData.length);
             Platform.runLater(() -> {
-                pitchmeter.setDominantFreqValue(dominantFreq, mainMenu.getFreqIndicator());
+                pitchmeter.setDominantFreqIndicator(dominantFreq, mainMenu.getFreqIndicator());
 
             });
 
@@ -47,9 +47,11 @@ public class Tuner extends Application
         }
     }
 
-
     public void start(Stage primaryStage) throws Exception
     {
+        NoteObject noteObject = new NoteObject(Note.C, Octave.twoLine);
+        System.out.println(pitchmeter.getFreqByNote(noteObject));
+        System.out.println(pitchmeter.getNoteByFreq(455).getNote());
 
         mainMenu.show();
 
@@ -107,7 +109,7 @@ public class Tuner extends Application
 
                     double freq = pitchmeter.findDominantFreq(27, 4200, postFFTsignal, sampleRate, rawMicData.length);
 
-                    Platform.runLater(() -> pitchmeter.setDominantFreqValue(freq, mainMenu.getFreqIndicator()));
+                    Platform.runLater(() -> pitchmeter.setDominantFreqIndicator(freq, mainMenu.getFreqIndicator()));
                     Platform.runLater(() -> spectrometer.setData(postProcessingData));  //lambda expr. ----> passes Runnable object to runlater func.
 
                     mutex1.release();
