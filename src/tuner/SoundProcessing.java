@@ -1,10 +1,5 @@
 package tuner;
 
-/**
- * Created by smelvinsky on 12.08.17.
- *
- */
-
 final class SoundProcessing
 {
     /*
