@@ -122,4 +122,9 @@ class MainMenu
     {
         return flatNoteIndicator;
     }
+
+    Label getNoteIndicator()
+    {
+        return noteIndicator;
+    }
 }

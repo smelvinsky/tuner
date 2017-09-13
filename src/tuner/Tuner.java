@@ -18,41 +18,16 @@ public class Tuner extends Application
     private SoundRecorder soundRecorder = new SoundRecorder();
 
     private double[] rawMicData = new double[8192];
+    private double[] postFFTsignal;
     private double[] postProcessingData;
     private float sampleRate = soundRecorder.getSampleRate();
 
-    private Semaphore mutex1 = new Semaphore(1);
-    private Semaphore mutex2 = new Semaphore(1);  // klasa sun.awt.Mutex nie działa......... :/
+    private Semaphore semaphore1 = new Semaphore(2);
+    private Semaphore mutex1 = new Semaphore(1);  // klasa sun.awt.Mutex nie działa......... :/
 
-
-    class PitchmeterDisplayTask extends Task
-    {
-        private double[] postFFTdata;
-
-        PitchmeterDisplayTask(double[] postFFTdata)
-        {
-            postFFTdata = new double[postFFTdata.length];
-            this.postFFTdata = postFFTdata;
-        }
-
-        protected Object call()
-        {
-            double dominantFreq =  pitchmeter.findDominantFreq(100, 4000, postFFTdata, sampleRate, rawMicData.length);
-            Platform.runLater(() -> {
-                pitchmeter.setDominantFreqIndicator(dominantFreq, mainMenu.getFreqIndicator());
-
-            });
-
-            return null;
-        }
-    }
 
     public void start(Stage primaryStage) throws Exception
     {
-        NoteObject noteObject = new NoteObject(Note.C, Octave.twoLine);
-        System.out.println(pitchmeter.getFreqByNote(noteObject));
-        System.out.println(pitchmeter.getNoteByFreq(455).getNote());
-
         mainMenu.show();
 
         Task microphoneDataTask = new Task()
@@ -67,18 +42,25 @@ public class Tuner extends Application
                 System.out.println("Audio capture started...");
                 while (true)
                 {
-                    mutex1.acquire();
-                    numBytesRead = soundRecorder.record(inputSignal, 0, inputSignal.length);
-                    if (numBytesRead == -1)
+                    try
                     {
-                        System.err.println("SoundRecorder.record(...) problem");
-                        System.exit(999);
+                        semaphore1.acquire();
+                        numBytesRead = soundRecorder.record(inputSignal, 0, inputSignal.length);
+                        if (numBytesRead == -1)
+                        {
+                            System.err.println("SoundRecorder.record(...) problem");
+                            System.exit(999);
+                        }
+                        for (int i = 0; i < inputSignal.length; i++)
+                        {
+                            rawMicData[i] = inputSignal[i];
+                        }
+                        mutex1.release();
                     }
-                    for (int i = 0; i < inputSignal.length; i++)
+                    catch (Exception e)
                     {
-                        rawMicData[i] = inputSignal[i];
+                        System.exit(20);
                     }
-                    mutex2.release();
                 }
             }
         };
@@ -87,37 +69,64 @@ public class Tuner extends Application
         {
             protected Object call() throws Exception
             {
-                double[] postFFTsignal;
-
                 while (true)
                 {
-                    mutex2.acquire();
-                    postFFTsignal = SoundProcessing.fft(rawMicData);
+                    try {
+                        mutex1.acquire();
+                        postFFTsignal = SoundProcessing.fft(rawMicData);
 
-                    if ((spectrometer.getLowFreq() >= 0) && (spectrometer.getHiFreq() >= 0))
-                    {
-                        double[] postFilterSignal = SoundProcessing.bandwidthFilter(postFFTsignal, sampleRate, spectrometer.getLowFreq(), spectrometer.getHiFreq());
-                        postFilterSignal = SoundProcessing.fftDisplayFormat(postFilterSignal);
-                        postProcessingData = postFilterSignal;
+                        if ((spectrometer.getLowFreq() >= 0) && (spectrometer.getHiFreq() >= 0)) {
+                            double[] postFilterSignal = SoundProcessing.bandwidthFilter(postFFTsignal, sampleRate, spectrometer.getLowFreq(), spectrometer.getHiFreq());
+                            postFilterSignal = SoundProcessing.fftDisplayFormat(postFilterSignal);
+                            postProcessingData = postFilterSignal;
+                        } else {
+                            double[] postFilterSignal;
+                            postFilterSignal = SoundProcessing.fftDisplayFormat(postFFTsignal);
+                            postProcessingData = postFilterSignal;
+                        }
+
+                        double freq = pitchmeter.findDominantFreq(27, 4200, postFFTsignal, sampleRate, rawMicData.length);
+
+                        Platform.runLater(() -> pitchmeter.setDominantFreqIndicator(freq, mainMenu.getFreqIndicator()));
+                        Platform.runLater(() -> spectrometer.setData(postProcessingData));  //lambda expr. ----> passes Runnable object to runlater func.
+
+                        semaphore1.release(2);
                     }
-                    else
+                    catch (Exception e)
                     {
-                        double[] postFilterSignal;
-                        postFilterSignal = SoundProcessing.fftDisplayFormat(postFFTsignal);
-                        postProcessingData = postFilterSignal;
+                        System.exit(21);
                     }
-
-                    double freq = pitchmeter.findDominantFreq(27, 4200, postFFTsignal, sampleRate, rawMicData.length);
-
-                    Platform.runLater(() -> pitchmeter.setDominantFreqIndicator(freq, mainMenu.getFreqIndicator()));
-                    Platform.runLater(() -> spectrometer.setData(postProcessingData));  //lambda expr. ----> passes Runnable object to runlater func.
-
-                    mutex1.release();
                 }
             }
         };
 
-        mutex2.acquire();
+        Task pitchmeterTask = new Task()
+        {
+            protected Object call() throws Exception
+            {
+
+                while (true)
+                {
+                    try
+                    {
+                        double dominantFreq = pitchmeter.findDominantFreq(100, 4000, postFFTsignal, sampleRate, rawMicData.length);
+
+                        Platform.runLater(() -> {
+                            pitchmeter.setDominantFreqIndicator(dominantFreq, mainMenu.getFreqIndicator());
+                            NoteObject noteObject = pitchmeter.getNoteByFreq(dominantFreq);
+                            pitchmeter.setNoteIndicatorWithNoteObject(noteObject, mainMenu.getNoteIndicator(), mainMenu.getSharpNoteIndicator());
+                        });
+                    }
+                    catch (Exception e)
+                    {
+                        System.exit(22);
+                    }
+                }
+            }
+        };
+
+        semaphore1.acquire();
+        mutex1.acquire();
 
         Thread microphoneDataThread = new Thread(microphoneDataTask);
         microphoneDataThread.start();

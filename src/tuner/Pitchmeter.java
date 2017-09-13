@@ -15,6 +15,7 @@ n - the number of half steps away from the fixed note you are.
 
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
+import javafx.scene.control.Labeled;
 
 import java.text.DecimalFormat;
 
@@ -185,6 +186,26 @@ class Pitchmeter
     NoteObject getNoteByFreq(double freq)
     {
         return noteFreqTable.getNoteByFreq(freq);
+    }
+
+    void setNoteIndicatorWithNoteObject(NoteObject noteObject, Labeled noteIndicator, Control sharpNoteIndicator)
+    {
+        if(noteObject.getNote().getHalfStepsNumber() == 0
+                || noteObject.getNote().getHalfStepsNumber() == 2
+                || noteObject.getNote().getHalfStepsNumber() == 4
+                || noteObject.getNote().getHalfStepsNumber() == 5
+                || noteObject.getNote().getHalfStepsNumber() == 7
+                || noteObject.getNote().getHalfStepsNumber() == 9
+                || noteObject.getNote().getHalfStepsNumber() == 11)
+        {
+            noteIndicator.setText(noteObject.getNote().toString());
+            sharpNoteIndicator.setVisible(false);
+        }
+        else
+        {
+            noteIndicator.setText(new NoteObject(Note.getNoteFromHalfStepsNumber(noteObject.getNote().getHalfStepsNumber() - 1), noteObject.getOctave()).getNote().toString());
+            sharpNoteIndicator.setVisible(true);
+        }
     }
 }
 
