@@ -16,6 +16,8 @@ n - the number of half steps away from the fixed note you are.
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Shape;
 
 import java.text.DecimalFormat;
 
@@ -110,6 +112,21 @@ class Pitchmeter
                 return noteObjects[i - 1];
             }
         }
+
+        int getTableLength()
+        {
+            return frequencies.length;
+        }
+
+        private NoteObject[] getNoteObjects()
+        {
+            return noteObjects;
+        }
+
+        private double[] getFrequencies()
+        {
+            return frequencies;
+        }
     }
 
     private NoteFreqTable noteFreqTable;
@@ -188,7 +205,7 @@ class Pitchmeter
         return noteFreqTable.getNoteByFreq(freq);
     }
 
-    void setNoteIndicatorWithNoteObject(NoteObject noteObject, Labeled noteIndicator, Control sharpNoteIndicator)
+    void setNoteIndicatorWithNoteObject(NoteObject noteObject, Labeled noteIndicator, Labeled octaveIndicator, Control sharpNoteIndicator)
     {
         if(noteObject.getNote().getHalfStepsNumber() == 0
                 || noteObject.getNote().getHalfStepsNumber() == 2
@@ -199,12 +216,98 @@ class Pitchmeter
                 || noteObject.getNote().getHalfStepsNumber() == 11)
         {
             noteIndicator.setText(noteObject.getNote().toString());
+            octaveIndicator.setText(Integer.toString(noteObject.getOctave().getOctaveNumber()));
             sharpNoteIndicator.setVisible(false);
         }
         else
         {
-            noteIndicator.setText(new NoteObject(Note.getNoteFromHalfStepsNumber(noteObject.getNote().getHalfStepsNumber() - 1), noteObject.getOctave()).getNote().toString());
+            NoteObject noteObjectToSet = new NoteObject(Note.getNoteFromHalfStepsNumber(noteObject.getNote().getHalfStepsNumber() - 1), noteObject.getOctave());
+            noteIndicator.setText(noteObjectToSet.getNote().toString());
+            octaveIndicator.setText(Integer.toString(noteObjectToSet.getOctave().getOctaveNumber()));
             sharpNoteIndicator.setVisible(true);
+        }
+    }
+
+    void setPitchDeviationIndicator(NoteObject noteObject, double dominantFreq, Shape[] shapes)
+    {
+        double freqDelta = dominantFreq - getFreqByNote(noteObject);
+        double nextNoteFreq;
+        double freqSteps;
+
+        if (freqDelta > 0)
+        {
+            nextNoteFreq = noteFreqTable.getFrequencies()[getNoteFreqTableIndex(noteObject) + 1];
+            freqSteps = Math.abs(nextNoteFreq - getFreqByNote(noteObject));
+            int i;
+            for (i = 1; i < 4; i++)
+            {
+                if (freqDelta > i * (freqSteps / 3))
+                {
+                    break;
+                }
+            }
+            if (freqDelta <= freqSteps / 6)
+            {
+                setPitchDeviationIndicatorLevel(shapes, 0);
+            }
+            else
+            {
+                setPitchDeviationIndicatorLevel(shapes, i);
+            }
+        }
+        else
+        {
+            nextNoteFreq = noteFreqTable.getFrequencies()[getNoteFreqTableIndex(noteObject) - 1];
+            freqSteps = Math.abs(nextNoteFreq - getFreqByNote(noteObject));
+            int i;
+            for (i = 1; i < 4; i++)
+            {
+                if (freqDelta > i * (freqSteps / 3))
+                {
+                    break;
+                }
+            }
+            if (freqDelta <= freqSteps / 6)
+            {
+                setPitchDeviationIndicatorLevel(shapes, 0);
+            }
+            else
+            {
+                setPitchDeviationIndicatorLevel(shapes, -i);
+            }
+        }
+    }
+
+    private int getNoteFreqTableIndex(NoteObject noteObject)
+    {
+        int i;
+        for (i = 0; i < noteFreqTable.getTableLength(); i++)
+        {
+            if ((noteObject.getNote() == noteFreqTable.getNoteObjects()[i].getNote()) && (noteObject.getOctave() == noteFreqTable.getNoteObjects()[i].getOctave()))
+            {
+                break;
+            }
+        }
+        return i;
+    }
+
+    private void setPitchDeviationIndicatorLevel(Shape[] shapes, int level)
+    {
+        if (level > 3 || level < -3)
+        {
+            throw new IllegalArgumentException("level cannot be out of (-3, 3) range");
+        }
+
+        for (int i = 0; i < shapes.length; i++)
+        {
+            if ((i - 3) == level)
+            {
+                shapes[i].setFill(Color.rgb(220, 224, 220));
+            }
+            else
+            {
+                shapes[i].setFill(Color.rgb(100, 102, 100));
+            }
         }
     }
 }
