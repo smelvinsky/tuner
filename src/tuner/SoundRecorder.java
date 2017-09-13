@@ -10,7 +10,7 @@ public class SoundRecorder
 
     SoundRecorder()
     {
-        inputFormat = new AudioFormat(10000, 16, 1, true, true);
+        inputFormat = new AudioFormat(8000, 16, 1, true, true);
         inputLine = init();
     }
 

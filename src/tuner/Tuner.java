@@ -17,7 +17,7 @@ public class Tuner extends Application
 
     private SoundRecorder soundRecorder = new SoundRecorder();
 
-    private double[] rawMicData = new double[8192];
+    private double[] rawMicData = new double[8192 * 2];
     private double[] postFFTsignal;
     private double[] postProcessingData;
     private float sampleRate = soundRecorder.getSampleRate();
@@ -37,7 +37,7 @@ public class Tuner extends Application
             protected Object call() throws Exception
             {
                 int numBytesRead;
-                byte[] inputSignal = new byte[8192];    /* const array size (power of 2) for FFT algorithm  */
+                byte[] inputSignal = new byte[8192 * 2];    /* const array size (power of 2) for FFT algorithm  */
 
                 soundRecorder.start();
 
@@ -88,7 +88,7 @@ public class Tuner extends Application
                         }
 
                         Platform.runLater(() -> {
-                            double dominantFreq = pitchmeter.findDominantFreq(100, 1000, postFFTsignal, sampleRate, rawMicData.length);
+                            double dominantFreq = pitchmeter.findDominantFreq(100, 1200, postFFTsignal, sampleRate, rawMicData.length);
                             pitchmeter.setDominantFreqIndicator(dominantFreq, mainMenu.getFreqIndicator());
                             NoteObject noteObject = pitchmeter.getNoteByFreq(dominantFreq);
                             pitchmeter.setNoteIndicatorWithNoteObject(noteObject, mainMenu.getNoteIndicator(), mainMenu.getOctaveIndicator(), mainMenu.getSharpNoteIndicator());

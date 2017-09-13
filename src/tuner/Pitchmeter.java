@@ -252,6 +252,10 @@ class Pitchmeter
             }
             else
             {
+                if (i > 3)
+                {
+                    i = 3;
+                }
                 setPitchDeviationIndicatorLevel(shapes, i);
             }
         }
@@ -273,6 +277,10 @@ class Pitchmeter
             }
             else
             {
+                if (i > 3)
+                {
+                    i = 3;
+                }
                 setPitchDeviationIndicatorLevel(shapes, -i);
             }
         }
